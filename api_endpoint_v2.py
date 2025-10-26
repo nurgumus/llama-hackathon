@@ -7,7 +7,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import traceback
 from main_v4 import NeighborhoodAgent
-from groq_llm_init import groq_llm
+from utils.groq_llm_init import groq_llm
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend access
