@@ -6,7 +6,7 @@ Integrates with main_v4.py agent and serves the frontend
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import traceback
-from main_v4 import NeighborhoodAgent
+from main import NeighborhoodAgent
 from utils.groq_llm_init import groq_llm
 
 app = Flask(__name__)
@@ -64,6 +64,15 @@ def recommend():
         
         # Extract preferences with reasoning
         preferences, reasoning = agent.extract_preferences_with_llm(user_query)
+        
+        # Check if extraction failed
+        if reasoning == "Unable to extract preferences" or all(v is None for v in preferences.values()):
+            return jsonify({
+                "error": "Failed to extract preferences from query",
+                "status": "error",
+                "query": user_query,
+                "hint": "Try rephrasing your query with specific requirements (budget, amenities, location preferences)"
+            }), 400
         
         # Get recommendations
         filtered_df, filters_applied = agent.filter_by_constraints(preferences)
