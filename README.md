@@ -38,6 +38,7 @@ https://data.ibb.gov.tr/
 - [Demo Screenshots]
 -
 <img width="1245" height="893" alt="Ekran görüntüsü 2025-10-26 113227" src="https://github.com/user-attachments/assets/741f96b8-1653-4358-91c6-ca358f5708e4" />
+<img width="526" height="737" alt="image" src="https://github.com/user-attachments/assets/4e29878a-8ced-4f02-b88c-9dbf16d1552b" />
 
 
 -  ### Backend Files:
