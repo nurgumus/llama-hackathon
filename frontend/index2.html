@@ -465,41 +465,41 @@
         <header>
             <h1>
                 <i data-lucide="home" style="width: 42px; height: 42px;"></i>
-                Istanbul Emlak Öneri Sistemi
+                Mahal.AI
             </h1>
-            <p>Yapay zeka destekli emlak önerisi alın</p>
+            <p>Get AI-powered neighborhood recommendations</p>
         </header>
 
         <main>
             <div class="search-section">
-                <h2>Arama Yap</h2>
-                <p class="description">Ne tür bir ev arıyorsunuz? Kriterlerinizi yazın.</p>
-                
+                <h2>Search</h2>
+                <p class="description">What kind of house are you looking for? Write your criteria.</p>
+
                 <form id="searchForm">
                     <div class="input-wrapper">
                         <input 
                             type="text" 
                             id="queryInput" 
-                            placeholder="Örn: Yeşil alanlı, okul yakını, bütçe 30000"
+                            placeholder="Örn: High welfare schools, budget 40000, 100 sqm"
                             required
                         >
                         <button type="submit" id="submitBtn">
-                            <span id="buttonText">Önerileri Getir</span>
+                            <span id="buttonText">Get Recommendations</span>
                             <span id="buttonLoader" style="display: none;">⏳</span>
                         </button>
                     </div>
                 </form>
 
                 <div class="examples">
-                    <p>Örnek sorgular:</p>
-                    <button class="example-btn" onclick="setExample('Aile için iyi okulları olan, bütçe 40000, 100 metrekare')">
-                        Aile için iyi okulları olan mahalle
+                    <p>Example queries:</p>
+                    <button class="example-btn" onclick="setExample('Family-oriented neighborhood, good schools, budget 40000')">
+                        Family-oriented neighborhood, good schools, budget 40000
                     </button>
-                    <button class="example-btn" onclick="setExample('Yeşil alan, en az 2 park, bütçe 30000')">
-                        Yeşil ve sakin bir mahalle
+                    <button class="example-btn" onclick="setExample('Green area, at least 2 parks, budget 30000')">
+                        Green area, at least 2 parks, budget 30000
                     </button>
-                    <button class="example-btn" onclick="setExample('Canlı bir yer, çok restoran ve kafe')">
-                        Sosyal hayat için canlı mahalle
+                    <button class="example-btn" onclick="setExample('Vibrant neighborhood, lots of restaurants and cafes')">
+                        Vibrant neighborhood, lots of restaurants and cafes
                     </button>
                 </div>
             </div>
@@ -519,7 +519,7 @@
                 <div id="resultsContent"></div>
                 <button class="copy-btn" onclick="copyResults()">
                     <i data-lucide="copy" style="width: 18px; height: 18px;"></i>
-                    Sonuçları Kopyala
+                    Kopyala
                 </button>
             </div>
         </main>
