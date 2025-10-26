@@ -35,7 +35,12 @@ https://data.ibb.gov.tr/
 
 - [Team Members](#-team-members)
 
-- [Demo Screenshots](<img width="1245" height="893" alt="Ekran görüntüsü 2025-10-26 113227" src="https://github.com/user-attachments/assets/aa85d8d8-cf65-4fc7-8041-05dc64196401" />) ### Backend Files:
+- [Demo Screenshots]
+-
+<img width="1245" height="893" alt="Ekran görüntüsü 2025-10-26 113227" src="https://github.com/user-attachments/assets/741f96b8-1653-4358-91c6-ca358f5708e4" />
+
+
+-  ### Backend Files:
 
 1. **`api_endpoint_v2.py`** - Flask API server (main backend)
 
