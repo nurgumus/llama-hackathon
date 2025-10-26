@@ -1,0 +1,5 @@
+.env
+chroma_db
+__pycache__
+ibb-secim
+istanbul_data
