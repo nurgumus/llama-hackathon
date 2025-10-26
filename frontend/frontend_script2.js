@@ -74,7 +74,7 @@ async function searchProperties(query) {
         
     } catch (error) {
         console.error('❌ Error:', error);
-        showError(error.message || 'Bilinmeyen bir hata oluştu');
+        showError(error.message || 'An unknown error occurred');
     } finally {
         hideLoading();
     }
@@ -83,7 +83,7 @@ async function searchProperties(query) {
 // Display results in a beautiful format
 function displayResults(data) {
     if (!data.recommendations || data.recommendations.length === 0) {
-        showError('Hiç sonuç bulunamadı. Lütfen farklı kriterler deneyin.');
+        showError('No results found. Please try different criteria.');
         return;
     }
     
@@ -100,26 +100,26 @@ function displayResults(data) {
                 En İyi ${data.recommendations.length} Öneri
             </h3>
             ${hasValidReasoning ? `
-                <p class="reasoning"><strong>Analiz:</strong> ${data.reasoning}</p>
+                <p class="reasoning"><strong>Analysis:</strong> ${data.reasoning}</p>
             ` : `
                 <p class="reasoning warning">
-                    <strong>⚠️ Not:</strong> Backend sorgunuzu tam olarak anlayamadı. 
-                    Lütfen daha spesifik kriterler belirtin (örn: "bütçe 30000 TL, yeşil alan, 2 park").
+                    <strong>⚠️ Not:</strong> Backend could not fully understand your query.
+                    Please provide more specific criteria (e.g., "budget 30000 TL, green space, 2 parks").
                 </p>
                 <details style="margin-top: 10px; color: #666; font-size: 0.9em;">
-                    <summary style="cursor: pointer; font-weight: 600;">🔍 Teknik Detaylar</summary>
+                    <summary style="cursor: pointer; font-weight: 600;">🔍 Technical Details</summary>
                     <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px; margin-top: 10px; overflow-x: auto;">Backend Response: ${data.reasoning || 'No reasoning provided'}</pre>
                 </details>
             `}
         </div>
         
         <div class="filters-applied">
-            <strong>Uygulanan Filtreler:</strong>
+            <strong>Applied Filters:</strong>
             ${data.filters_applied && data.filters_applied.length > 0 ? 
                 '<ul>' + data.filters_applied.map(f => `<li>${f}</li>`).join('') + '</ul>' :
-                '<p>Filtre uygulanmadı - Genel öneriler gösteriliyor</p>'
+                '<p>No filter has been applied</p>'
             }
-            <p><em>${data.filtered_neighborhoods || 0} / ${data.total_neighborhoods || 0} mahalle kriterleri karşılıyor</em></p>
+            <p><em>${data.filtered_neighborhoods || 0} / ${data.total_neighborhoods || 0} neighborhoods match the criteria</em></p>
         </div>
     `;
     
@@ -127,22 +127,22 @@ function displayResults(data) {
     data.recommendations.forEach(rec => {
         const amenities = rec.details.amenities;
         const amenityText = [
-            amenities.restaurants > 0 ? `${amenities.restaurants} restoran` : null,
-            amenities.schools > 0 ? `${amenities.schools} okul` : null,
-            amenities.parks > 0 ? `${amenities.parks} park` : null,
-            amenities.cafes > 0 ? `${amenities.cafes} kafe` : null
+            amenities.restaurants > 0 ? `${amenities.restaurants} Restaurant` : null,
+            amenities.schools > 0 ? `${amenities.schools} School` : null,
+            amenities.parks > 0 ? `${amenities.parks} Park` : null,
+            amenities.cafes > 0 ? `${amenities.cafes} Cafe` : null
         ].filter(Boolean).join(', ');
         
         html += `
             <div class="recommendation-card">
                 <div class="card-header">
                     <h4>#${rec.rank}. ${rec.neighborhood}, ${rec.district}</h4>
-                    <span class="similarity-badge">${rec.similarity_score}% Eşleşme</span>
+                    <span class="similarity-badge">${rec.similarity_score}% Match</span>
                 </div>
                 
                 ${rec.match_reasons && rec.match_reasons.length > 0 ? `
                     <div class="match-reasons">
-                        <strong>Neden öneriliyor:</strong>
+                        <strong>Why it's recommended:</strong>
                         <ul>
                             ${rec.match_reasons.map(r => `<li>${r}</li>`).join('')}
                         </ul>
@@ -152,11 +152,11 @@ function displayResults(data) {
                 ${rec.financial ? `
                     <div class="financial-info">
                         <div class="info-item">
-                            <span class="label">Tahmini Kira:</span>
+                            <span class="label">Estimated Rent:</span>
                             <span class="value">${rec.financial.monthly_rent.toLocaleString('tr-TR')} TRY/ay</span>
                         </div>
                         <div class="info-item">
-                            <span class="label">Bütçeden Kalan:</span>
+                            <span class="label">Remaining:</span>
                             <span class="value ${rec.financial.budget_remaining >= 0 ? 'positive' : 'negative'}">
                                 ${rec.financial.budget_remaining.toLocaleString('tr-TR')} TRY
                             </span>
@@ -168,7 +168,7 @@ function displayResults(data) {
                     <div class="detail-item">
                         <i data-lucide="tree-deciduous" class="icon" style="width: 32px; height: 32px; color: #16a34a;"></i>
                         <div>
-                            <div class="label">Yeşil Alan</div>
+                            <div class="label">Green Space Index</div>
                             <div class="value">${(rec.details.green_index * 100).toFixed(0)}%</div>
                         </div>
                     </div>
@@ -176,7 +176,7 @@ function displayResults(data) {
                     <div class="detail-item">
                         <i data-lucide="trending-up" class="icon" style="width: 32px; height: 32px; color: #667eea;"></i>
                         <div>
-                            <div class="label">Refah Seviyesi</div>
+                            <div class="label">Welfare Index</div>
                             <div class="value">${(rec.details.welfare_index * 100).toFixed(0)}%</div>
                         </div>
                     </div>
@@ -185,7 +185,7 @@ function displayResults(data) {
                         <div class="detail-item">
                             <i data-lucide="users" class="icon" style="width: 32px; height: 32px; color: #f59e0b;"></i>
                             <div>
-                                <div class="label">Nüfus</div>
+                                <div class="label">Population</div>
                                 <div class="value">${rec.details.population.toLocaleString('tr-TR')}</div>
                             </div>
                         </div>
@@ -195,7 +195,7 @@ function displayResults(data) {
                         <div class="detail-item full-width">
                             <i data-lucide="map-pin" class="icon" style="width: 32px; height: 32px; color: #dc2626;"></i>
                             <div>
-                                <div class="label">Olanaklar</div>
+                                <div class="label">Amenity</div>
                                 <div class="value">${amenityText}</div>
                             </div>
                         </div>
@@ -253,10 +253,10 @@ function setExample(text) {
 function copyResults() {
     const text = resultsContent.innerText;
     navigator.clipboard.writeText(text).then(() => {
-        alert('Sonuçlar kopyalandı! 📋');
+        alert('Results Copied! 📋');
     }).catch(err => {
-        console.error('Kopyalama hatası:', err);
-        alert('Kopyalama başarısız');
+        console.error('Error copying results:', err);
+        alert('Copying failed');
     });
 }
 

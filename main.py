@@ -63,60 +63,426 @@ class NeighborhoodAgent:
     def extract_preferences_with_llm(self, user_query: str) -> tuple:
         """Extract structured preferences from natural language query with reasoning"""
         
-        prompt = """You are a real estate agent analyzing a client's housing preferences. Extract preferences AND explain your reasoning.
+        prompt = """You are an expert real estate agent with deep knowledge of Istanbul neighborhoods. Your task is to analyze client queries and extract their housing preferences with intelligent reasoning.
+
+====================
+AVAILABLE DATA FIELDS
+====================
+
+LOCATION & BASIC INFO:
+- Mahalle (Neighborhood), İlçe (District)
+- Nüfus (Population)
+
+AMENITIES & SERVICES:
+- restaurant, cafe, library, school, park
+- atm, pharmacy, hospital, mosque
+- bus_station, train_station, transit_station
+
+QUALITY INDICES (0-1 scale):
+- INDEX_YASAM_KALITESI (Quality of Life Index)
+- INDEX_YURUNEBILIRLIK (Walkability Index)
+- KULTUREL_AKTIVITE_INDEX (Cultural Activity Index)
+- Green_Index (Green Space Index)
+- Society_Welfare_Index (Social Welfare Index)
+
+BUILDING CHARACTERISTICS:
+- 1980_oncesi (Pre-1980 buildings)
+- 1980-2000_arasi (1980-2000 buildings)
+- 2000_sonrasi (Post-2000 buildings)
+- 1-4 kat_arasi (1-4 floor buildings)
+- 5-9 kat_arasi (5-9 floor buildings)
+- 9-19 kat_arasi (9-19 floor buildings)
+
+EARTHQUAKE SAFETY SIMULATION:
+- cok_agir_hasarli_bina_sayisi (Severely damaged buildings)
+- agir_hasarli_bina_sayisi (Heavily damaged buildings)
+- orta_hasarli_bina_sayisi (Moderately damaged buildings)
+- hafif_hasarli_bina_sayisi (Lightly damaged buildings)
+- can_kaybi_sayisi (Expected casualties)
+- agir_yarali_sayisi (Serious injuries)
+- hastanede_tedavi_sayisi (Hospitalizations)
+- hafif_yarali_sayisi (Minor injuries)
+- gecici_barinma (People needing temporary shelter)
+
+ECONOMIC DATA:
+- Avg_Rent_Per_SqM (Average rent per square meter in TRY)
+
+POLITICAL DATA:
+- CHP, AK PARTİ, SAADET, VATAN PARTİSİ (vote percentages)
+
+====================
+EXTRACTION TASK
+====================
 
 User Query: "USER_QUERY_HERE"
 
-First, provide your reasoning about what the user needs (2-3 sentences explaining what you understood and WHY you're setting certain thresholds).
+STEP 1 - REASONING:
+Provide a thoughtful analysis (3-5 sentences) covering:
+- What lifestyle/persona this user represents
+- Which explicit preferences they stated
+- Which implicit needs you're inferring and WHY
+- What trade-offs or priorities you're setting
+- Any assumptions you're making about thresholds
 
-Then extract these fields:
+STEP 2 - EXTRACT PREFERENCES:
+
+BUDGET & SIZE:
 1. monthly_budget (number in TRY, or null)
-2. apartment_size_sqm (number, or null) 
-3. min_parks (minimum number of parks, or null) - Set to 1+ if parks mentioned or good for walking/dogs
-4. min_schools (minimum number of schools, or null) - Set to 1+ if schools/family/children mentioned
-5. min_restaurants (minimum number of restaurants, or null) - Set to 3+ if dining/food/nightlife mentioned
-6. min_cafes (minimum number of cafes, or null) - Set to 3+ if cafes/coffee/vibrant/social mentioned
-7. min_green_index (0-1 scale, or null) - IMPORTANT: Set to 0.7+ if "green", "nature", "trees", "park", "walk dog", "outdoor" mentioned
-8. max_population (maximum population, or null) - Set to 20000 if "quiet", "peaceful", "calm" mentioned
-9. min_total_stations (minimum total stations: bus+train+transit, or null) - Set to 2+ if "public transport", "metro", "transit", "commute" mentioned
-10. max_casualties (maximum casualties in earthquake simulation, or null) - Set to 5 if earthquake safety mentioned
-11. max_severely_damaged (maximum severely damaged buildings in earthquake simulation, or null) - Set to 50 if earthquake safety mentioned
-12. max_heavily_damaged (maximum heavily damaged buildings in earthquake simulation, or null) - Set to 100 if earthquake safety mentioned
-13. earthquake_safe (boolean, or null) - Set to true if "earthquake safe", "seismic safety", "earthquake resistant" mentioned
-14. preferences_text (free text description of preferences)
+2. apartment_size_sqm (number, or null)
+3. max_rent_per_sqm (number in TRY, or null)
 
-EARTHQUAKE SAFETY DATA AVAILABLE:
-- can_kaybi_sayisi: Expected casualties in earthquake simulation
-- cok_agir_hasarli_bina_sayisi: Number of severely damaged buildings
-- agir_hasarli_bina_sayisi: Number of heavily damaged buildings
-- orta_hasarli_bina_sayisi: Number of moderately damaged buildings
-- hafif_hasarli_bina_sayisi: Number of lightly damaged buildings
-- gecici_barinma: Number of people needing temporary shelter
+AMENITIES (minimum counts):
+4. min_parks (integer, or null)
+5. min_schools (integer, or null)
+6. min_restaurants (integer, or null)
+7. min_cafes (integer, or null)
+8. min_hospitals (integer, or null)
+9. min_pharmacies (integer, or null)
+10. min_mosques (integer, or null)
+11. min_libraries (integer, or null)
 
-PUBLIC TRANSPORTATION DATA AVAILABLE:
-- bus_station: Number of bus stations
-- train_station: Number of train stations
-- transit_station: Number of transit stations
-- Total stations = bus_station + train_station + transit_station
+QUALITY INDICES (0-1 scale):
+12. min_green_index (float 0-1, or null)
+13. min_walkability_index (float 0-1, or null)
+14. min_quality_of_life_index (float 0-1, or null)
+15. min_cultural_activity_index (float 0-1, or null)
+16. min_welfare_index (float 0-1, or null)
 
-RULES FOR IMPLICIT EXTRACTION:
-- "green area" / "nature" / "trees" / "outdoor" → min_green_index: 0.7, min_parks: 2
-- "walk my dog" / "walking" / "exercise" → min_green_index: 0.7, min_parks: 2
-- "quiet" / "peaceful" / "calm" → max_population: 20000, min_green_index: 0.6
-- "family" / "children" / "kids" → min_schools: 2, min_parks: 2
-- "vibrant" / "lively" / "social" / "nightlife" → min_restaurants: 5, min_cafes: 5
-- "public transport" / "metro" / "commute" / "transit" / "subway" → min_total_stations: 8
-- "easy commute" / "accessible" / "well-connected" → min_total_stations: 5
-- "safe" / "secure" / "earthquake safe" / "seismic" → earthquake_safe: true, max_casualties: 5, max_severely_damaged: 50
-- "earthquake resistant" / "not near fault" / "seismically safe" → earthquake_safe: true, max_casualties: 3, max_severely_damaged: 30
+TRANSPORTATION:
+17. min_total_stations (integer: bus+train+transit, or null)
+18. min_bus_stations (integer, or null)
+19. min_train_stations (integer, or null)
+20. requires_metro (boolean, or null)
 
-Format your response EXACTLY like this:
+POPULATION & DENSITY:
+21. max_population (integer, or null)
+22. min_population (integer, or null)
+23. prefers_low_density (boolean, or null)
 
-REASONING: [Your 2-3 sentence explanation here]
+EARTHQUAKE SAFETY:
+24. earthquake_safe (boolean, or null)
+25. max_casualties (integer, or null)
+26. max_severely_damaged (integer, or null)
+27. max_heavily_damaged (integer, or null)
+28. max_moderately_damaged (integer, or null)
+29. max_temporary_shelter_needed (integer, or null)
 
-PREFERENCES: {"monthly_budget": 30000, "apartment_size_sqm": null, "min_parks": 2, "min_schools": null, "min_restaurants": null, "min_cafes": null, "min_green_index": 0.8, "max_population": 20000, "min_total_stations": null, "max_casualties": null, "max_severely_damaged": null, "max_heavily_damaged": null, "earthquake_safe": null, "preferences_text": "quiet green area"}
+BUILDING PREFERENCES:
+30. prefer_modern_buildings (boolean, or null) - True if post-2000 preferred
+31. prefer_historic_buildings (boolean, or null) - True if pre-1980 preferred
+32. prefer_low_rise (boolean, or null) - True if 1-4 floors preferred
+33. avoid_high_rise (boolean, or null) - True if avoiding 9-19 floors
+34. min_post_2000_buildings (integer, or null)
 
-Extract from user query above:"""
+POLITICAL PREFERENCES:
+35. prefer_progressive_areas (boolean, or null) - True if high CHP areas preferred
+36. prefer_conservative_areas (boolean, or null) - True if high AK PARTİ areas preferred
+
+LIFESTYLE FLAGS:
+37. family_friendly (boolean, or null)
+38. young_professional (boolean, or null)
+39. retiree_friendly (boolean, or null)
+40. pet_friendly (boolean, or null)
+41. car_free_lifestyle (boolean, or null)
+42. nightlife_seeker (boolean, or null)
+43. quiet_lifestyle (boolean, or null)
+
+FREE TEXT:
+44. preferences_text (string summarizing all preferences)
+45. deal_breakers (string listing must-have or must-avoid items)
+
+====================
+SMART INFERENCE RULES
+====================
+
+🏃 ACTIVE LIFESTYLE INDICATORS:
+"walk dog" / "jogging" / "exercise" / "running" / "outdoor activities"
+→ min_parks: 3, min_green_index: 0.75, min_walkability_index: 0.7, pet_friendly: true
+
+🌳 NATURE/GREEN PREFERENCES:
+"green" / "nature" / "trees" / "garden" / "park" / "greenery"
+→ min_parks: 2, min_green_index: 0.8
+
+👨‍👩‍👧‍👦 FAMILY INDICATORS:
+"family" / "children" / "kids" / "schools" / "playground"
+→ min_schools: 3, min_parks: 2, family_friendly: true, min_welfare_index: 0.8
+
+🤫 QUIET/PEACEFUL INDICATORS:
+"quiet" / "peaceful" / "calm" / "serene" / "tranquil" / "away from noise"
+→ max_population: 15000, min_green_index: 0.65, quiet_lifestyle: true, prefers_low_density: true
+
+🎉 VIBRANT/SOCIAL INDICATORS:
+"vibrant" / "lively" / "social" / "bustling" / "nightlife" / "entertainment"
+→ min_restaurants: 8, min_cafes: 8, nightlife_seeker: true, min_cultural_activity_index: 0.7
+
+🚇 TRANSPORTATION INDICATORS:
+"metro" / "subway" / "public transport" / "transit" / "train"
+→ requires_metro: true, min_train_stations: 1, min_total_stations: 5
+
+"commute" / "accessible" / "well-connected" / "easy access"
+→ min_total_stations: 8, min_walkability_index: 0.6
+
+"car-free" / "no car" / "without car" / "walkable city"
+→ car_free_lifestyle: true, min_total_stations: 10, min_walkability_index: 0.8, min_restaurants: 5
+
+🏥 HEALTH/MEDICAL INDICATORS:
+"elderly" / "health issues" / "medical" / "chronic illness" / "healthcare"
+→ min_hospitals: 5, min_pharmacies: 5, prefer_low_rise: true
+
+💼 YOUNG PROFESSIONAL INDICATORS:
+"young professional" / "career" / "workspace" / "coworking" / "startup"
+→ young_professional: true, min_cafes: 8, min_restaurants: 5, min_total_stations: 8
+
+👴 RETIREE INDICATORS:
+"retired" / "elderly" / "senior" / "pension" / "quiet life"
+→ retiree_friendly: true, min_hospitals: 3, min_pharmacies: 3, quiet_lifestyle: true, prefer_low_rise: true
+
+🏚️ EARTHQUAKE SAFETY INDICATORS:
+"earthquake safe" / "seismic" / "disaster resistant" / "structurally sound"
+→ earthquake_safe: true, max_casualties: 5, max_severely_damaged: 30, max_heavily_damaged: 80, prefer_modern_buildings: true
+
+"earthquake proof" / "very safe" / "maximum safety"
+→ earthquake_safe: true, max_casualties: 2, max_severely_damaged: 15, max_heavily_damaged: 40, min_post_2000_buildings: 200
+
+"PTSD" / "trauma" / "fear earthquakes" / "anxious about earthquakes"
+→ earthquake_safe: true, max_casualties: 0, max_severely_damaged: 10, max_heavily_damaged: 20, prefer_modern_buildings: true
+
+🏛️ CULTURAL/HERITAGE INDICATORS:
+"historic" / "traditional" / "heritage" / "old Istanbul" / "authentic"
+→ prefer_historic_buildings: true, min_mosques: 2, min_cultural_activity_index: 0.6
+
+"modern" / "contemporary" / "new buildings" / "newly developed"
+→ prefer_modern_buildings: true, min_post_2000_buildings: 150
+
+🗳️ POLITICAL INDICATORS:
+"progressive" / "liberal" / "secular" / "modern values"
+→ prefer_progressive_areas: true
+
+"conservative" / "traditional values" / "religious community"
+→ prefer_conservative_areas: true, min_mosques: 3
+
+💰 BUDGET INDICATORS:
+"affordable" / "budget-friendly" / "cheap" / "economical"
+→ max_rent_per_sqm: 500
+
+"luxury" / "upscale" / "premium" / "high-end"
+→ min_quality_of_life_index: 0.9, min_welfare_index: 0.9
+
+"mid-range" / "moderate" / "average price"
+→ max_rent_per_sqm: 600
+
+====================
+THRESHOLD GUIDELINES
+====================
+
+GREEN INDEX:
+- 0.9+: Exceptionally green (forest-like)
+- 0.8-0.9: Very green (abundant parks)
+- 0.7-0.8: Green (good park access)
+- 0.6-0.7: Moderate green (some parks)
+- <0.6: Limited green space
+
+POPULATION:
+- <10,000: Very quiet
+- 10,000-15,000: Quiet
+- 15,000-20,000: Moderate
+- 20,000+: Busy
+
+STATIONS:
+- 15+: Excellent connectivity
+- 10-14: Very good connectivity
+- 5-9: Good connectivity
+- 3-4: Moderate connectivity
+- 1-2: Limited connectivity
+
+AMENITY COUNTS:
+- Restaurants: 3 (basic), 8 (good variety), 15+ (dining hub)
+- Cafes: 3 (basic), 8 (social), 15+ (café culture)
+- Schools: 2 (basic), 5 (good choice), 10+ (education hub)
+- Parks: 1 (minimal), 3 (good), 5+ (very green)
+- Hospitals: 2 (basic), 5 (good), 10+ (medical hub)
+
+EARTHQUAKE SAFETY (Conservative thresholds):
+- Maximum casualties: 5 (safe), 10 (moderate), 20+ (risky)
+- Severely damaged: 30 (safe), 50 (moderate), 100+ (risky)
+- Heavily damaged: 80 (safe), 150 (moderate), 300+ (risky)
+
+====================
+OUTPUT FORMAT
+====================
+
+REASONING:
+[Provide 3-5 sentences explaining:
+1. What type of person/lifestyle this represents
+2. Key explicit preferences they mentioned
+3. Important implicit needs you're inferring
+4. Threshold decisions and trade-offs you're making
+5. Any assumptions or context from the query]
+
+PREFERENCES:
+{
+    "monthly_budget": null,
+    "apartment_size_sqm": null,
+    "max_rent_per_sqm": 550,
+    "min_parks": 3,
+    "min_schools": null,
+    "min_restaurants": 5,
+    "min_cafes": 8,
+    "min_hospitals": null,
+    "min_pharmacies": null,
+    "min_mosques": null,
+    "min_libraries": null,
+    "min_green_index": 0.75,
+    "min_walkability_index": 0.7,
+    "min_quality_of_life_index": null,
+    "min_cultural_activity_index": null,
+    "min_welfare_index": 0.8,
+    "min_total_stations": 8,
+    "min_bus_stations": null,
+    "min_train_stations": null,
+    "requires_metro": true,
+    "max_population": null,
+    "min_population": null,
+    "prefers_low_density": false,
+    "earthquake_safe": null,
+    "max_casualties": null,
+    "max_severely_damaged": null,
+    "max_heavily_damaged": null,
+    "max_moderately_damaged": null,
+    "max_temporary_shelter_needed": null,
+    "prefer_modern_buildings": null,
+    "prefer_historic_buildings": null,
+    "prefer_low_rise": null,
+    "avoid_high_rise": null,
+    "min_post_2000_buildings": null,
+    "prefer_progressive_areas": null,
+    "prefer_conservative_areas": null,
+    "family_friendly": null,
+    "young_professional": true,
+    "retiree_friendly": null,
+    "pet_friendly": null,
+    "car_free_lifestyle": true,
+    "nightlife_seeker": false,
+    "quiet_lifestyle": false,
+    "preferences_text": "Young professional seeking walkable, well-connected area with café culture and green spaces for moderate rent",
+    "deal_breakers": "Must have metro access, cannot be far from parks"
+}
+
+====================
+EXAMPLE QUERIES
+====================
+
+EXAMPLE 1:
+Query: "I'm a young professional who works remotely. I love café culture and need good metro access, but I also want quiet green spaces for my morning jogs. My budget is around 500-550 TL/sqm."
+
+REASONING:
+This user is a remote-working young professional balancing urban convenience with nature access. They explicitly want café culture and metro connectivity, suggesting they value social spaces and mobility despite working from home. The morning jogging mention implies they need quality parks and walkability, not just token green space. I'm setting min_cafes to 8 for genuine café culture, requires_metro to true for non-negotiable transit, min_parks to 3 for running variety, and min_green_index to 0.75 for actual greenery. The "quiet" mention suggests they want respite from work-from-home isolation but not overwhelming density, so I'm leaving population flexible but setting quiet_lifestyle to true.
+
+PREFERENCES:
+{
+    "monthly_budget": null,
+    "apartment_size_sqm": null,
+    "max_rent_per_sqm": 550,
+    "min_parks": 3,
+    "min_schools": null,
+    "min_restaurants": null,
+    "min_cafes": 8,
+    "min_hospitals": null,
+    "min_pharmacies": null,
+    "min_mosques": null,
+    "min_libraries": null,
+    "min_green_index": 0.75,
+    "min_walkability_index": 0.7,
+    "min_quality_of_life_index": null,
+    "min_cultural_activity_index": null,
+    "min_welfare_index": null,
+    "min_total_stations": 5,
+    "min_bus_stations": null,
+    "min_train_stations": 1,
+    "requires_metro": true,
+    "max_population": null,
+    "min_population": null,
+    "prefers_low_density": false,
+    "earthquake_safe": null,
+    "max_casualties": null,
+    "max_severely_damaged": null,
+    "max_heavily_damaged": null,
+    "max_moderately_damaged": null,
+    "max_temporary_shelter_needed": null,
+    "prefer_modern_buildings": null,
+    "prefer_historic_buildings": null,
+    "prefer_low_rise": null,
+    "avoid_high_rise": null,
+    "min_post_2000_buildings": null,
+    "prefer_progressive_areas": null,
+    "prefer_conservative_areas": null,
+    "family_friendly": null,
+    "young_professional": true,
+    "retiree_friendly": null,
+    "pet_friendly": null,
+    "car_free_lifestyle": true,
+    "nightlife_seeker": false,
+    "quiet_lifestyle": true,
+    "preferences_text": "Remote-working young professional seeking balance of café culture, metro access, and green spaces for jogging in quiet setting under 550 TL/sqm",
+    "deal_breakers": "Must have metro station, needs genuine café culture (8+ cafés), requires quality parks for running"
+}
+
+EXAMPLE 2:
+Query: "Looking for a family neighborhood with excellent schools, safe from earthquakes, plenty of parks for the kids, and my elderly parents will live with us so we need hospitals nearby. We're worried about earthquake safety after the recent news. Budget is flexible but prefer under 600 TL/sqm."
+
+REASONING:
+This is a multi-generational household with heightened earthquake anxiety, making safety the paramount concern. The "after recent news" mention suggests trauma-informed search priorities, so I'm setting very strict earthquake parameters: max_casualties at 2, max_severely_damaged at 15, and prefer_modern_buildings to true. The elderly parent factor requires substantial medical infrastructure (min_hospitals: 5) and accessibility (prefer_low_rise: true). Children need quality education (min_schools: 5 for choice) and recreation (min_parks: 3). The family_friendly flag activates, implying need for high welfare_index (0.85) and quality_of_life_index (0.8). Budget flexibility suggests prioritizing safety over cost, so max_rent_per_sqm at 600 allows quality neighborhoods.
+
+PREFERENCES:
+{
+    "monthly_budget": null,
+    "apartment_size_sqm": null,
+    "max_rent_per_sqm": 600,
+    "min_parks": 3,
+    "min_schools": 5,
+    "min_restaurants": null,
+    "min_cafes": null,
+    "min_hospitals": 5,
+    "min_pharmacies": 3,
+    "min_mosques": null,
+    "min_libraries": null,
+    "min_green_index": 0.7,
+    "min_walkability_index": null,
+    "min_quality_of_life_index": 0.8,
+    "min_cultural_activity_index": null,
+    "min_welfare_index": 0.85,
+    "min_total_stations": null,
+    "min_bus_stations": null,
+    "min_train_stations": null,
+    "requires_metro": null,
+    "max_population": null,
+    "min_population": null,
+    "prefers_low_density": null,
+    "earthquake_safe": true,
+    "max_casualties": 2,
+    "max_severely_damaged": 15,
+    "max_heavily_damaged": 40,
+    "max_moderately_damaged": 100,
+    "max_temporary_shelter_needed": 300,
+    "prefer_modern_buildings": true,
+    "prefer_historic_buildings": null,
+    "prefer_low_rise": true,
+    "avoid_high_rise": null,
+    "min_post_2000_buildings": 200,
+    "prefer_progressive_areas": null,
+    "prefer_conservative_areas": null,
+    "family_friendly": true,
+    "young_professional": null,
+    "retiree_friendly": true,
+    "pet_friendly": null,
+    "car_free_lifestyle": null,
+    "nightlife_seeker": null,
+    "quiet_lifestyle": null,
+    "preferences_text": "Multi-generational family (young children + elderly parents) prioritizing maximum earthquake safety, excellent schools, medical access, and parks, flexible budget under 600 TL/sqm",
+    "deal_breakers": "MUST be earthquake safe (trauma-informed), requires abundant schools and hospitals, needs modern construction, must have parks for children"
+}
+
+Now extract preferences from the user query above."""
         
         prompt = prompt.replace("USER_QUERY_HERE", user_query)
 
@@ -130,6 +496,10 @@ Extract from user query above:"""
             # Extract reasoning
             reasoning_match = re.search(r'REASONING:\s*(.+?)(?=PREFERENCES:|$)', response, re.DOTALL)
             reasoning = reasoning_match.group(1).strip() if reasoning_match else "Understanding user preferences..."
+            
+            # Clean up reasoning - remove separator lines and extra formatting
+            reasoning = re.sub(r'=+', '', reasoning)  # Remove === lines
+            reasoning = reasoning.strip()
             
             # Extract JSON - more robust pattern
             json_match = re.search(r'PREFERENCES:\s*(\{.*?\})\s*(?:\n|$)', response, re.DOTALL)
